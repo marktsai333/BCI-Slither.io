@@ -124,15 +124,72 @@ Game.prototype = {
     // world wrap
     var b = this.game.world.bounds;
     this.game.snakes.forEach((snake) => {
-      // 確保蛇頭不會超出邊界
-      snake.head.x = Phaser.Math.wrap(snake.head.x, b.x, b.right);
-      snake.head.y = Phaser.Math.wrap(snake.head.y, b.y, b.bottom);
-      
-      // 確保蛇身不會超出邊界
-      snake.sections.forEach((section) => {
-        section.x = Phaser.Math.wrap(section.x, b.x, b.right);
-        section.y = Phaser.Math.wrap(section.y, b.y, b.bottom);
-      });
+      // 檢查是否碰到邊界
+      if (snake.head.body.x <= b.x || snake.head.body.x >= b.right ||
+          snake.head.body.y <= b.y || snake.head.body.y >= b.bottom) {
+        
+        // 如果是玩家蛇，根據游標位置決定轉向
+        if (snake instanceof PlayerSnake) {
+          var mousePosX = this.game.input.activePointer.worldX;
+          var mousePosY = this.game.input.activePointer.worldY;
+          var headX = snake.head.body.x;
+          var headY = snake.head.body.y;
+          
+          // 計算游標相對於蛇頭的角度
+          var targetAngle = (180 * Math.atan2(mousePosX - headX, mousePosY - headY)) / Math.PI;
+          targetAngle = targetAngle > 0 ? 180 - targetAngle : -180 - targetAngle;
+          
+          // 根據碰到的邊界調整目標角度
+          if (snake.head.body.x <= b.x) {
+            // 碰到左邊界，限制角度在 -90 到 90 度之間
+            targetAngle = Phaser.Math.clamp(targetAngle, -90, 90);
+          } else if (snake.head.body.x >= b.right) {
+            // 碰到右邊界，限制角度在 90 到 270 度之間
+            targetAngle = Phaser.Math.clamp(targetAngle, 90, 270);
+          } else if (snake.head.body.y <= b.y) {
+            // 碰到上邊界，限制角度在 0 到 180 度之間
+            targetAngle = Phaser.Math.clamp(targetAngle, 0, 180);
+          } else {
+            // 碰到下邊界，限制角度在 -180 到 0 度之間
+            targetAngle = Phaser.Math.clamp(targetAngle, -180, 0);
+          }
+          
+          // 平滑轉向
+          var angleDiff = targetAngle - snake.head.body.angle;
+          // 確保角度差在 -180 到 180 度之間
+          if (angleDiff > 180) angleDiff -= 360;
+          if (angleDiff < -180) angleDiff += 360;
+          
+          // 每次更新時轉向一小部分
+          snake.head.body.angle += angleDiff * 0.2;
+          
+          // 確保蛇不會卡在邊界
+          snake.head.body.x = Phaser.Math.clamp(snake.head.body.x, b.x + 2, b.right - 2);
+          snake.head.body.y = Phaser.Math.clamp(snake.head.body.y, b.y + 2, b.bottom - 2);
+        } else {
+          // 如果是 Bot 蛇，使用原來的邏輯
+          var currentAngle = snake.head.body.angle;
+          var newAngle;
+          
+          if (snake.head.body.x <= b.x) {
+            newAngle = 0;
+          } else if (snake.head.body.x >= b.right) {
+            newAngle = 180;
+          } else if (snake.head.body.y <= b.y) {
+            newAngle = 90;
+          } else {
+            newAngle = -90;
+          }
+          
+          var angleDiff = newAngle - currentAngle;
+          if (angleDiff > 180) angleDiff -= 360;
+          if (angleDiff < -180) angleDiff += 360;
+          
+          snake.head.body.angle += angleDiff * 0.2;
+          snake.head.body.x = Phaser.Math.clamp(snake.head.body.x, b.x + 2, b.right - 2);
+          snake.head.body.y = Phaser.Math.clamp(snake.head.body.y, b.y + 2, b.bottom - 2);
+        }
+      }
     });
 
     // update UI marker
