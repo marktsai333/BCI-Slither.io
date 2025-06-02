@@ -9,7 +9,14 @@ Food = function (game, x, y) {
   this.game = game;
   this.debug = false;
   this.sprite = this.game.add.sprite(x, y, "food");
-  this.sprite.tint = 0xff0000;
+  
+  // 生成隨機亮色
+  var r = Math.floor(Math.random() * 200) + 55; // 55-255
+  var g = Math.floor(Math.random() * 200) + 55; // 55-255
+  var b = Math.floor(Math.random() * 200) + 55; // 55-255
+  this.sprite.tint = (r << 16) | (g << 8) | b;
+  
+  this.sprite.scale.setTo(0.07);
 
   this.game.physics.p2.enable(this.sprite, this.debug);
   this.sprite.body.clearShapes();

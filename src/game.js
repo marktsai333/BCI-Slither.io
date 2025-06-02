@@ -8,7 +8,7 @@ Game.prototype = {
     this.game.load.image("background", "asset/tile.png");
     this.game.load.image("eye-white", "asset/eye-white.png");
     this.game.load.image("eye-black", "asset/eye-black.png");
-    this.game.load.image("food", "asset/hex.png");
+    this.game.load.image("food", "asset/hex_new.png");
   },
 
   create: function () {
@@ -34,6 +34,13 @@ Game.prototype = {
     this.foodGroup = this.game.add.group();
     this.snakeHeadCollisionGroup = this.game.physics.p2.createCollisionGroup();
     this.foodCollisionGroup = this.game.physics.p2.createCollisionGroup();
+
+    // 初始化食物生成系統
+    this.foodSpawnTimer = 0;
+    this.foodSpawnInterval = 2000; // 每2秒檢查一次
+    this.minFoodDistance = 100; // 食物之間的最小距離
+    this.maxFoodPerRegion = 5; // 每個區域的最大食物數量
+    this.regionSize = 400; // 區域大小
 
     // initial food
     for (var i = 0; i < 100; i++) {
@@ -120,6 +127,13 @@ Game.prototype = {
     // update snakes & food
     this.game.snakes.forEach((snake) => snake.update());
     this.foodGroup.children.forEach((child) => child.food.update());
+
+    // 更新食物生成計時器
+    this.foodSpawnTimer += this.game.time.elapsed;
+    if (this.foodSpawnTimer >= this.foodSpawnInterval) {
+      this.foodSpawnTimer = 0;
+      this.checkAndSpawnFood();
+    }
 
     // world wrap
     var b = this.game.world.bounds;
@@ -212,6 +226,56 @@ Game.prototype = {
     this.barMarker.cameraOffset.x = currX + (targetX - currX) * 0.15;
   },
 
+  // 檢查並生成新食物
+  checkAndSpawnFood: function() {
+    var width = this.game.width;
+    var height = this.game.height;
+    
+    // 將世界分成網格
+    var regions = {};
+    var regionCount = {};
+    
+    // 計算每個區域的食物數量
+    this.foodGroup.children.forEach(function(food) {
+      var regionX = Math.floor(food.body.x / this.regionSize);
+      var regionY = Math.floor(food.body.y / this.regionSize);
+      var regionKey = regionX + ',' + regionY;
+      
+      if (!regionCount[regionKey]) {
+        regionCount[regionKey] = 0;
+      }
+      regionCount[regionKey]++;
+    }, this);
+    
+    // 檢查每個區域，如果食物數量少於最大值，則生成新食物
+    for (var x = -width/this.regionSize; x <= width/this.regionSize; x++) {
+      for (var y = -height/this.regionSize; y <= height/this.regionSize; y++) {
+        var regionKey = x + ',' + y;
+        var count = regionCount[regionKey] || 0;
+        
+        if (count < this.maxFoodPerRegion) {
+          // 在該區域內隨機生成新食物
+          var foodX = (x * this.regionSize) + Math.random() * this.regionSize;
+          var foodY = (y * this.regionSize) + Math.random() * this.regionSize;
+          
+          // 確保食物不會太靠近其他食物
+          var tooClose = false;
+          this.foodGroup.children.forEach(function(food) {
+            var dx = food.body.x - foodX;
+            var dy = food.body.y - foodY;
+            if (Math.sqrt(dx*dx + dy*dy) < this.minFoodDistance) {
+              tooClose = true;
+            }
+          }, this);
+          
+          if (!tooClose) {
+            this.initFood(foodX, foodY);
+          }
+        }
+      }
+    }
+  },
+
   initFood: function (x, y) {
     var f = new Food(this.game, x, y);
     f.sprite.body.setCollisionGroup(this.foodCollisionGroup);
@@ -250,6 +314,7 @@ Game.prototype = {
         x = Phaser.Math.clamp(x, self.game.world.bounds.x, self.game.world.bounds.right);
         y = Phaser.Math.clamp(y, self.game.world.bounds.y, self.game.world.bounds.bottom);
         
+        // 創建新的 Bot 蛇（會自動生成新的隨機顏色）
         var bot = new BotSnake(self.game, "circle", x, y);
         bot.head.body.setCollisionGroup(self.snakeHeadCollisionGroup);
         bot.head.body.collides([self.foodCollisionGroup]);
