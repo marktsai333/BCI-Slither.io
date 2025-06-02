@@ -15,6 +15,7 @@ Snake = function (game, spriteKey, x, y) {
   this.debug = false;
   this.snakeLength = 0;
   this.spriteKey = spriteKey;
+  this.username = '';
 
   //various quantities that can be changed
   this.scale = 0.6;
@@ -22,6 +23,7 @@ Snake = function (game, spriteKey, x, y) {
   this.slowSpeed = 300;
   this.speed = this.slowSpeed;
   this.rotationSpeed = 40;
+  this.color = 0xffffff; // 預設為白色
 
   //initialize groups and arrays
   this.collisionGroup = this.game.physics.p2.createCollisionGroup();
@@ -105,6 +107,7 @@ Snake.prototype = {
     this.sectionGroup.add(sec);
     sec.sendToBack();
     sec.scale.setTo(this.scale);
+    sec.tint = this.color; // 設定與蛇頭相同的顏色
 
     this.sections.push(sec);
 
@@ -336,5 +339,8 @@ Snake.prototype = {
   addDestroyedCallback: function (callback, context) {
     this.onDestroyedCallbacks.push(callback);
     this.onDestroyedContexts.push(context);
+  },
+  setUsername: function(username) {
+    this.username = username;
   },
 };

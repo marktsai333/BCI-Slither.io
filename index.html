@@ -23,6 +23,35 @@
             padding: 0;
             background: #000;
         }
+        #login-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+        #login-screen input {
+            padding: 10px;
+            margin: 10px 0;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #login-screen button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #login-screen button:hover {
+            background: #45a049;
+        }
         #leaderboard {
             position: fixed;
             top: 20px;
@@ -31,10 +60,12 @@
             padding: 10px;
             border-radius: 5px;
             z-index: 100;
+            min-width: 200px;
         }
         #leaderboard h3 {
             margin: 0 0 10px 0;
             text-align: center;
+            color: #333;
         }
         #leaderboard-list {
             list-style: none;
@@ -42,8 +73,13 @@
             margin: 0;
         }
         #leaderboard-list li {
-            padding: 5px 0;
+            padding: 5px 10px;
             border-bottom: 1px solid #ccc;
+            display: flex;
+            justify-content: space-between;
+        }
+        #leaderboard-list li:last-child {
+            border-bottom: none;
         }
         .hidden {
             display: none !important;
@@ -51,8 +87,14 @@
     </style>
 </head>
 <body>
+    <div id="login-screen">
+        <h2>Enter Your Name</h2>
+        <input type="text" id="player-name" placeholder="Your name" maxlength="15">
+        <br>
+        <button id="start-game">Play!</button>
+    </div>
     <div id="leaderboard" class="hidden">
-        <h3>排行榜</h3>
+        <h3>Leaderboard</h3>
         <ul id="leaderboard-list"></ul>
     </div>
     <div id="game-container"></div>

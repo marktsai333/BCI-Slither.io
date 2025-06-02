@@ -1,4 +1,8 @@
-Game = function (game) {};
+Game = function (game) {
+    this.playerName = '';
+    this.isGameStarted = false;
+    this.isPlayerDead = false;
+};
 
 Game.prototype = {
   preload: function () {
@@ -9,12 +13,38 @@ Game.prototype = {
     this.game.load.image("eye-white", "asset/eye-white.png");
     this.game.load.image("eye-black", "asset/eye-black.png");
     this.game.load.image("food", "asset/hex_new.png");
+
+    // 設置登入介面事件監聽
+    this.setupLoginHandlers();
   },
 
-  create: function () {
-    // expose game instance for BCI
-    window.game = this.game;
+  setupLoginHandlers: function() {
+    var self = this;
+    var startButton = document.getElementById('start-game');
+    var nameInput = document.getElementById('player-name');
 
+    startButton.addEventListener('click', function() {
+      var name = nameInput.value.trim();
+      if (name) {
+        self.playerName = name;
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('leaderboard').classList.remove('hidden');
+        self.startGame();
+      } else {
+        alert('Please enter your name!');
+      }
+    });
+
+    // 按 Enter 鍵也可以開始遊戲
+    nameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        startButton.click();
+      }
+    });
+  },
+
+  startGame: function() {
+    this.isGameStarted = true;
     var width = this.game.width;
     var height = this.game.height;
 
@@ -37,10 +67,10 @@ Game.prototype = {
 
     // 初始化食物生成系統
     this.foodSpawnTimer = 0;
-    this.foodSpawnInterval = 2000; // 每2秒檢查一次
-    this.minFoodDistance = 100; // 食物之間的最小距離
-    this.maxFoodPerRegion = 5; // 每個區域的最大食物數量
-    this.regionSize = 400; // 區域大小
+    this.foodSpawnInterval = 2000;
+    this.minFoodDistance = 100;
+    this.maxFoodPerRegion = 5;
+    this.regionSize = 400;
 
     // initial food
     for (var i = 0; i < 100; i++) {
@@ -53,13 +83,14 @@ Game.prototype = {
     // snakes
     this.game.snakes = [];
     var player = new PlayerSnake(this.game, "circle", 0, 0);
+    player.setUsername(this.playerName);
     this.game.camera.follow(player.head);
     window.playerSnake = player;
 
-    // 修改 BotSnake 的初始位置，讓它們離玩家更遠
-    var spawnDistance = Math.min(width, height) * 0.4; // 使用世界大小的 40% 作為生成距離
+    // 修改 BotSnake 的初始位置
+    var spawnDistance = Math.min(width, height) * 0.4;
     var angle1 = Math.random() * Math.PI * 2;
-    var angle2 = angle1 + Math.PI + (Math.random() * Math.PI - Math.PI/2); // 確保兩個 bot 不會太靠近
+    var angle2 = angle1 + Math.PI + (Math.random() * Math.PI - Math.PI/2);
 
     new BotSnake(
       this.game, 
@@ -89,9 +120,9 @@ Game.prototype = {
     // draw bar background
     this.barBg = this.game.add.graphics();
     this.barBg.fixedToCamera = true;
-    this.barBg.beginFill(0x0000ff, 0.5); // 淡藍色背景
+    this.barBg.beginFill(0x0000ff, 0.5);
     this.barBg.drawRect(0, 0, this.barWidth / 2, this.barHeight);
-    this.barBg.beginFill(0xff0000, 0.5); // 淡紅色背景
+    this.barBg.beginFill(0xff0000, 0.5);
     this.barBg.drawRect(
       this.barWidth / 2,
       0,
@@ -123,7 +154,14 @@ Game.prototype = {
     this.currentRatio = 0.5;
   },
 
+  create: function () {
+    // expose game instance for BCI
+    window.game = this.game;
+  },
+
   update: function () {
+    if (!this.isGameStarted) return;
+
     // update snakes & food
     this.game.snakes.forEach((snake) => snake.update());
     this.foodGroup.children.forEach((child) => child.food.update());
@@ -134,6 +172,9 @@ Game.prototype = {
       this.foodSpawnTimer = 0;
       this.checkAndSpawnFood();
     }
+
+    // 更新排行榜
+    this.updateLeaderboard();
 
     // world wrap
     var b = this.game.world.bounds;
@@ -226,6 +267,31 @@ Game.prototype = {
     this.barMarker.cameraOffset.x = currX + (targetX - currX) * 0.15;
   },
 
+  updateLeaderboard: function() {
+    var leaderboardList = document.getElementById('leaderboard-list');
+    leaderboardList.innerHTML = '';
+
+    // 獲取所有蛇的資訊並排序
+    var snakes = this.game.snakes.slice();
+    snakes.sort(function(a, b) {
+      return b.snakeLength - a.snakeLength;
+    });
+
+    // 顯示前 10 名
+    snakes.slice(0, 10).forEach(function(snake) {
+      var li = document.createElement('li');
+      var nameSpan = document.createElement('span');
+      var scoreSpan = document.createElement('span');
+      
+      nameSpan.textContent = snake.username || 'Bot';
+      scoreSpan.textContent = snake.snakeLength;
+      
+      li.appendChild(nameSpan);
+      li.appendChild(scoreSpan);
+      leaderboardList.appendChild(li);
+    });
+  },
+
   // 檢查並生成新食物
   checkAndSpawnFood: function() {
     var width = this.game.width;
@@ -285,6 +351,13 @@ Game.prototype = {
   },
 
   snakeDestroyed: function (snake) {
+    // 如果是玩家死亡
+    if (snake instanceof PlayerSnake) {
+      this.isPlayerDead = true;
+      this.showGameOverScreen();
+      return;
+    }
+
     // drop food along destroyed snake path
     var step = Math.round(snake.headPath.length / snake.snakeLength) * 2 || 1;
     for (var i = 0; i < snake.headPath.length; i += step) {
@@ -304,7 +377,7 @@ Game.prototype = {
         var spawnDistance = Math.min(
           self.game.world.bounds.width,
           self.game.world.bounds.height
-        ) * 0.4; // 使用世界大小的 40% 作為生成距離
+        ) * 0.4;
         
         var angle = Math.random() * Math.PI * 2;
         var x = player.head.x + Math.cos(angle) * spawnDistance;
@@ -314,7 +387,7 @@ Game.prototype = {
         x = Phaser.Math.clamp(x, self.game.world.bounds.x, self.game.world.bounds.right);
         y = Phaser.Math.clamp(y, self.game.world.bounds.y, self.game.world.bounds.bottom);
         
-        // 創建新的 Bot 蛇（會自動生成新的隨機顏色）
+        // 創建新的 Bot 蛇
         var bot = new BotSnake(self.game, "circle", x, y);
         bot.head.body.setCollisionGroup(self.snakeHeadCollisionGroup);
         bot.head.body.collides([self.foodCollisionGroup]);
@@ -326,5 +399,65 @@ Game.prototype = {
         }
       }, 300);
     }
+  },
+
+  showGameOverScreen: function() {
+    // 創建遊戲結束畫面
+    var gameOverDiv = document.createElement('div');
+    gameOverDiv.id = 'game-over-screen';
+    gameOverDiv.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 1000;
+    `;
+    
+    var score = window.playerSnake ? window.playerSnake.snakeLength : 0;
+    gameOverDiv.innerHTML = `
+      <h2>Game Over!</h2>
+      <p>Your Score: ${score}</p>
+      <button id="restart-game" style="
+        padding: 10px 20px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+      ">Play Again</button>
+    `;
+    
+    document.body.appendChild(gameOverDiv);
+    
+    // 添加重新開始按鈕事件
+    document.getElementById('restart-game').addEventListener('click', function() {
+      document.body.removeChild(gameOverDiv);
+      this.restartGame();
+    }.bind(this));
+  },
+
+  restartGame: function() {
+    // 清理現有的遊戲狀態
+    this.game.snakes.forEach(function(snake) {
+      snake.destroy();
+    });
+    this.foodGroup.children.forEach(function(food) {
+      food.food.destroy();
+    });
+    
+    // 重置遊戲狀態
+    this.isPlayerDead = false;
+    this.isGameStarted = false;
+    
+    // 顯示登入畫面
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('player-name').value = '';
+    document.getElementById('player-name').focus();
   },
 };
