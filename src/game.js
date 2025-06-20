@@ -353,6 +353,15 @@ Game.prototype = {
   snakeDestroyed: function (snake) {
     // 如果是玩家死亡
     if (snake instanceof PlayerSnake) {
+      // 先掉落食物
+      var step = Math.round(snake.headPath.length / snake.snakeLength) * 2 || 1;
+      for (var i = 0; i < snake.headPath.length; i += step) {
+        this.initFood(
+          snake.headPath[i].x + Util.randomInt(-10, 10),
+          snake.headPath[i].y + Util.randomInt(-10, 10)
+        );
+      }
+      
       this.isPlayerDead = true;
       this.showGameOverScreen();
       return;

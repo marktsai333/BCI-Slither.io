@@ -8,6 +8,18 @@
 BotSnake = function(game, spriteKey, x, y) {
     Snake.call(this, game, spriteKey, x, y);
     this.trend = 1;
+    
+    // 生成隨機顏色
+    var r = Math.floor(Math.random() * 200) + 55; // 55-255
+    var g = Math.floor(Math.random() * 200) + 55; // 55-255
+    var b = Math.floor(Math.random() * 200) + 55; // 55-255
+    this.color = (r << 16) | (g << 8) | b;
+    
+    // 設定蛇頭和身體的顏色
+    this.head.tint = this.color;
+    this.sections.forEach(function(section) {
+        section.tint = this.color;
+    }, this);
 }
 
 BotSnake.prototype = Object.create(Snake.prototype);

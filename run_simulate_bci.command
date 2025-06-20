@@ -15,7 +15,7 @@ conda activate bci_unity
 export PYLSL_LIB="$HOME/lsl_x86/lib/liblsl.dylib"
 
 echo "🚀 啟動 simulate_bci.py..."
-python "/Users/marktsai333/VSCode/專題/BCI game/simulate_bci.py"
+python "/Users/marktsai333/Documents/專題/slither-bci-demo/slither-io/simulate_bci.py"
 
 echo "完成。請按任意鍵關閉此視窗..."
 read -n 1 -s -r
